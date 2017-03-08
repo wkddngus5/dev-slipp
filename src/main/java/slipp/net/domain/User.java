@@ -21,12 +21,21 @@ public class User {
 		return id;
 	}
 	
-	public String getPassword() {
-		return password;
+	public boolean matchId(Long newId) {
+		if (newId == null) {
+			return false;
+		}
+		return newId.equals(id);
 	}
 	
 	public void setPassword(String password) {
 		this.password = password;
+	}
+	public boolean matchPassword(String newPassword) {
+		if (newPassword == null) {
+			return false;
+		}
+		return newPassword.equals(password);
 	}
 	public void setName(String name) {
 		this.name = name;
@@ -44,6 +53,10 @@ public class User {
 	@Override
 	public String toString() {
 		return "User [userId=" + userId + ", password=" + password + ", name=" + name + ", email=" + email + "]";
+	}
+
+	public String getUserId() {
+		return userId;
 	}
 	
 	
