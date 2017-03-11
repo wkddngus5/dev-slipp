@@ -16,15 +16,16 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import slipp.net.domain.AnswerRepository;
 import slipp.net.domain.Question;
 import slipp.net.domain.QuestionRepository;
+import slipp.net.domain.Result;
 import slipp.net.domain.User;
 
 @Controller
 @RequestMapping("/questions")
 public class QuestionController {
-	
+
 	@Autowired
 	private QuestionRepository questionRepository;
-	
+
 	@GetMapping("/form")
 	public String form(HttpSession session) {
 		if (!HttpSessionUtils.isLoginUser(session)) {
@@ -44,62 +45,60 @@ public class QuestionController {
 		questionRepository.save(newQuestion);
 		return "redirect:/";
 	}
-	
+
 	@GetMapping("/{id}")
 	public String show(@PathVariable Long id, Model model) {
 		model.addAttribute("question", questionRepository.findOne(id));
 		return "/qna/show";
 	}
-	
+
 	@GetMapping("/{id}/form")
 	public String updateForm(@PathVariable Long id, Model model, HttpSession session) {
-		System.out.println("=====================");
-		try {
-			Question question = questionRepository.findOne(id);
-			model.addAttribute("question", question);
-			hasPermission(session, question);
-			return "/qna/updateForm";
-		}catch (IllegalStateException e) {
-			model.addAttribute("errorMessage", e.getMessage());
+		Question question = questionRepository.findOne(id);
+		Result result = valid(session, question);
+		if (!result.isValid()) {
+			model.addAttribute("errorMessage", result.getErrorMessage());
 			return "/user/login";
 		}
+
+		model.addAttribute("question", question);
+		return "/qna/updateForm";
 	}
-	
-	private boolean hasPermission(HttpSession session, Question question) {
+
+	private Result valid(HttpSession session, Question question) {
 		if (!HttpSessionUtils.isLoginUser(session)) {
-			throw new IllegalStateException("로그인이 필요합니다.");
+			return Result.fail("로그인이 필요합니다.");
 		}
 		User loginUser = HttpSessionUtils.getUserFromSession(session);
 		if (!question.isSameWriter(loginUser)) {
-			throw new IllegalStateException("자신이 쓴 글만 수정, 삭제가 가능합니다.");
+			return Result.fail("자신이 쓴 글만 수정, 삭제가 가능합니다.");
 		}
-		return true;
+		return Result.ok();
+
 	}
-	
+
 	@PutMapping("/{id}")
 	public String update(@PathVariable Long id, String title, String contents, Model model, HttpSession session) {
-		try {
-			Question question = questionRepository.findOne(id);
-			hasPermission(session, question);
-			question.update(title, contents);
-			questionRepository.save(question);
-			return String.format("redirect:/questions/%d", id);
-		}catch (IllegalStateException e) {
-			model.addAttribute("errorMessage", e.getMessage());
+		Question question = questionRepository.findOne(id);
+		Result result = valid(session, question);
+		if (!result.isValid()) {
+			model.addAttribute("errorMessage", result.getErrorMessage());
 			return "/user/login";
 		}
+		question.update(title, contents);
+		questionRepository.save(question);
+		return String.format("redirect:/questions/%d", id);
 	}
-	
+
 	@DeleteMapping("/{id}")
 	public String delete(@PathVariable Long id, Model model, HttpSession session) {
-		try {
-			Question question = questionRepository.findOne(id);
-			hasPermission(session, question);
-			questionRepository.delete(id);
-			return "redirect:/";
-		}catch (IllegalStateException e) {
-			model.addAttribute("errorMessage", e.getMessage());
+		Question question = questionRepository.findOne(id);
+		Result result = valid(session, question);
+		if (!result.isValid()) {
+			model.addAttribute("errorMessage", result.getErrorMessage());
 			return "/user/login";
 		}
+			questionRepository.delete(id);
+			return "redirect:/";
 	}
 }
