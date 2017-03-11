@@ -6,11 +6,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import slipp.net.domain.AnswerRepository;
 import slipp.net.domain.Question;
 import slipp.net.domain.QuestionRepository;
 import slipp.net.domain.User;
@@ -48,5 +51,42 @@ public class QuestionController {
 		return "/qna/show";
 	}
 	
+	@GetMapping("/{id}/form")
+	public String updateForm(@PathVariable Long id, Model model, HttpSession session) {
+		if (!HttpSessionUtils.isLoginUser(session)) {
+			return "/users/loginForm";
+		}
+		User loginUser = HttpSessionUtils.getUserFromSession(session);
+		Question question = questionRepository.findOne(id);
+		if (!question.isSameWriter(loginUser)) {
+			return "/users/loginForm";
+		}
+		
+		model.addAttribute("question", question);
+		return "qna/updateForm";
+	}
+	
+	@PutMapping("/{id}")
+	public String update(@PathVariable Long id, String title, String contents, HttpSession session) {
+		Question question = questionRepository.findOne(id);
+		if (!HttpSessionUtils.isLoginUser(session)) {
+			return "/users/loginForm";
+		}
+		User loginUser = HttpSessionUtils.getUserFromSession(session);
+		if (!question.isSameWriter(loginUser)) {
+			return "/users/loginForm";
+		}
+		
+		
+		question.update(title, contents);
+		questionRepository.save(question);
+		return String.format("redirect:/questions/%d", id);
+	}
+	
+	@DeleteMapping("/{id}")
+	public String delete(@PathVariable Long id) {
+		questionRepository.delete(id);
+		return "redirect:/";
+	}
 
 }
